@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gewächshaus Automatisierung</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+
+        .card {
+            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-link {
+            color: #333;
+            padding: 10px 15px;
+        }
+
+        .nav-link.active {
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+
+        .chart-container {
+            height: 300px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <nav class="nav flex-column">
+                            <a class="nav-link active" href="{{ url_for('index') }}"><i class="bi bi-speedometer2"></i>
+                                Dashboard</a>
+                            <a class="nav-link" href="{{ url_for('steuerung') }}"><i class="bi bi-gear"></i>
+                                Steuerung</a>
+                            <a class="nav-link" href="{{ url_for('verlauf') }}"><i class="bi bi-graph-up"></i>
+                                Verlauf</a>
+                            <a class="nav-link" href="{{ url_for('einstellungen') }}"><i class="bi bi-sliders"></i>
+                                Einstellungen</a>
+
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-9">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Aktuelle Werte</h5>
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <div>
+                                        <h6>Windgeschwindigkeit</h6>
+                                        <h3 id="wind-speed">-- km/h</h3>
+                                    </div>
+                                    <div>
+                                        <h6>Motorstatus</h6>
+                                        <h3 id="motor-status">--</h3>
+                                    </div>
+                                    <div>
+                                        <h6>Bodenfeuchtigkeit</h6>
+                                        <h3 id="bodenfeuchte">-- V</h3>
+                                        <p id="feuchtigkeits-status" style="font-weight: bold; font-size: 1.1em;">--</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Motorsteuerung</h5>
+                                <div class="d-grid gap-2 mt-3">
+                                    <button class="btn btn-primary" onclick="sendAction('aus')">
+                                        <i class="bi bi-arrow-down-circle"></i> Ausfahren
+                                    </button>
+                                    <button class="btn btn-danger" onclick="sendAction('ein')">
+                                        <i class="bi bi-arrow-up-circle"></i> Einfahren
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="sendAction('stopp')">
+                                        <i class="bi bi-stop-circle"></i> Stopp
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Windgeschwindigkeit Verlauf</h5>
+                                <div class="chart-container">
+                                    <canvas id="windChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Chart.js Konfiguration
+        const ctx = document.getElementById('windChart').getContext('2d');
+        const windData = {
+            labels: [],
+            datasets: [{
+                label: 'Windgeschwindigkeit (km/h)',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        };
+        const windChart = new Chart(ctx, {
+            type: 'line',
+            data: windData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Daten-Update Funktionen
+        function updateWind() {
+            fetch('/wind')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('wind-speed').innerText = `${data.wind_kmh} km/h`;
+                    document.getElementById('motor-status').innerText = data.status;
+
+                    // Chart aktualisieren
+                    const now = new Date();
+                    const timeStr = now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds();
+
+                    windData.labels.push(timeStr);
+                    windData.datasets[0].data.push(data.wind_kmh);
+
+                    // Nur die letzten 20 Datenpunkte anzeigen
+                    if (windData.labels.length > 20) {
+                        windData.labels.shift();
+                        windData.datasets[0].data.shift();
+                    }
+
+                    windChart.update();
+                });
+        }
+
+        function sendAction(action) {
+            fetch('/motor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'action=' + action
+            });
+        }
+
+        // Automatisches Update starten
+        setInterval(updateWind, 1000);
+        window.onload = updateWind;
+        function updateBodenfeuchte() {
+            fetch('/bodenfeuchte')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.spannung_v !== undefined) {
+                        document.getElementById('bodenfeuchte').innerText = `${data.spannung_v} V`;
+                        if (data.status !== undefined) {
+                            document.getElementById('feuchtigkeits-status').innerText = data.status;
+                        } else {
+                            document.getElementById('feuchtigkeits-status').innerText = "--";
+                        }
+                    } else {
+                        document.getElementById('bodenfeuchte').innerText = `Fehler`;
+                        document.getElementById('feuchtigkeits-status').innerText = "--";
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('bodenfeuchte').innerText = `Fehler`;
+                    document.getElementById('feuchtigkeits-status').innerText = "--";
+                });
+        }
+        setInterval(updateBodenfeuchte, 5000);  // Alle 5 Sekunden aktualisieren
+        window.onload = () => {
+            updateWind();
+            updateBodenfeuchte();
+        };
+    </script>
+</body>
+
+</html>

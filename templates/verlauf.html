@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gewächshaus Automatisierung - Verlauf</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { 
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .card {
+            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .nav-link {
+            color: #333;
+            padding: 10px 15px;
+        }
+        .nav-link.active {
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+        .chart-container {
+            height: 400px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <nav class="nav flex-column">
+                            <a class="nav-link active" href="{{ url_for('index') }}"><i class="bi bi-speedometer2"></i>
+                                Dashboard</a>
+                            <a class="nav-link" href="{{ url_for('steuerung') }}"><i class="bi bi-gear"></i>
+                                Steuerung</a>
+                            <a class="nav-link" href="{{ url_for('verlauf') }}"><i class="bi bi-graph-up"></i>
+                                Verlauf</a>
+                            <a class="nav-link" href="{{ url_for('einstellungen') }}"><i class="bi bi-sliders"></i>
+                                Einstellungen</a>
+
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title">Windgeschwindigkeit Verlauf</h5>
+                            <div class="btn-group">
+                                <button class="btn btn-outline-primary" onclick="setTimeRange('1h')">1 Stunde</button>
+                                <button class="btn btn-outline-primary" onclick="setTimeRange('6h')">6 Stunden</button>
+                                <button class="btn btn-outline-primary" onclick="setTimeRange('24h')">24 Stunden</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="windChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <iframe src="http://localhost:3000/d-solo/5f0d1c21-c7ac-47f4-bd38-72395bb5f963/gewachshaus?orgId=1&from=1747748889298&to=1747752489298&timezone=browser&theme=light&panelId=1&__feature.dashboardSceneSolo" width="450" height="200" frameborder="0"></iframe>                    <div class="card-body">
+                    <iframe src="http://localhost:3000/d-solo/5f0d1c21-c7ac-47f4-bd38-72395bb5f963/gewachshaus?orgId=1&from=1747748889298&to=1747752489298&timezone=browser&theme=light&panelId=2&__feature.dashboardSceneSolo" width="450" height="200" frameborder="0"></iframe>   
+                    <h5 class="card-title">Motoraktivitäten</h5>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Zeitpunkt</th>
+                                        <th>Aktion</th>
+                                        <th>Windgeschwindigkeit</th>
+                                        <th>Modus</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activityLog">
+                                    <!-- Wird durch JavaScript gefüllt -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Chart.js Konfiguration
+        const ctx = document.getElementById('windChart').getContext('2d');
+        const windData = {
+            labels: [],
+            datasets: [{
+                label: 'Windgeschwindigkeit (km/h)',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: false
+            }]
+        };
+        const windChart = new Chart(ctx, {
+            type: 'line',
+            data: windData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Windgeschwindigkeit (km/h)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Zeit'
+                        }
+                    }
+                }
+            }
+        });
+
+        let currentTimeRange = '1h';
+
+        function setTimeRange(range) {
+            currentTimeRange = range;
+            // Hier würde man normalerweise die Daten für den gewählten Zeitraum laden
+            // Für dieses Beispiel simulieren wir es
+            updateChart();
+        }
+
+        function updateChart() {
+            fetch('/wind')
+                .then(response => response.json())
+                .then(data => {
+                    const now = new Date();
+                    const timeStr = now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds();
+                    
+                    windData.labels.push(timeStr);
+                    windData.datasets[0].data.push(data.wind_kmh);
+                    
+                    // Datenpunkte entsprechend des gewählten Zeitraums begrenzen
+                    const maxPoints = {
+                        '1h': 60,
+                        '6h': 360,
+                        '24h': 1440
+                    }[currentTimeRange];
+                    
+                    if (windData.labels.length > maxPoints) {
+                        windData.labels.shift();
+                        windData.datasets[0].data.shift();
+                    }
+                    
+                    windChart.update();
+
+                    // Aktivitätslog aktualisieren
+                    updateActivityLog(data);
+                });
+        }
+
+        function updateActivityLog(data) {
+            const log = document.getElementById('activityLog');
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            
+            // Neue Aktivität am Anfang der Tabelle einfügen
+            const row = log.insertRow(0);
+            row.innerHTML = `
+                <td>${timeStr}</td>
+                <td>${data.status}</td>
+                <td>${data.wind_kmh} km/h</td>
+                <td>Automatisch</td>
+            `;
+
+            // Maximal 10 Einträge anzeigen
+            if (log.rows.length > 10) {
+                log.deleteRow(log.rows.length - 1);
+            }
+        }
+
+        // Automatisches Update starten
+        setInterval(updateChart, 1000);
+        window.onload = () => {
+            setTimeRange('1h');
+        };
+    </script>
+</body>
+</html> 

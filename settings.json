@@ -1,0 +1,8 @@
+{
+  "windLimit": 35.0,
+  "motorSpeed": 100,
+  "autoMode": true,
+  "notifications": false,
+  "updateInterval": 1000,
+  "dataRetention": 7
+}
