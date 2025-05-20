@@ -16,6 +16,7 @@ LPWM = 18
 ANEMO_PIN = 23
 PIN_CS = 5
 PIN_DRDY = 4
+RELAIS_PIN = 16
 
 # === GPIO Setup ===
 GPIO.setmode(GPIO.BCM)
@@ -25,6 +26,12 @@ GPIO.setup(LPWM, GPIO.OUT)
 GPIO.setup(ANEMO_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(PIN_CS, GPIO.OUT)
 GPIO.setup(PIN_DRDY, GPIO.IN)
+GPIO.setup(RELAIS_PIN, GPIO.OUT)
+GPIO.output(RELAIS_PIN, GPIO.LOW)  # Anfangszustand: aus
+
+
+# === Bewässerung ===
+bewaesserung_aktiv = False
 
 # === PWM Setup ===
 freq = 2000
@@ -220,6 +227,26 @@ def motor():
     elif action == 'stopp':
         motor_stopp()
     return '', 204
+
+@app.route('/bewaesserung', methods=['POST'])
+def bewaesserung():
+    global bewaesserung_aktiv
+    action = request.form.get('action')
+    if action == 'ein':
+        print("Relais an (Pin als OUTPUT)")
+        GPIO.setup(RELAIS_PIN, GPIO.OUT)
+        GPIO.output(RELAIS_PIN, GPIO.HIGH)  # Relais schaltet ein
+        bewaesserung_aktiv = True
+    elif action == 'aus':
+        print("Relais aus (Pin als INPUT)")
+        GPIO.setup(RELAIS_PIN, GPIO.IN)    # Relais schaltet aus
+        bewaesserung_aktiv = False
+
+    return '', 204
+
+@app.route('/bewaesserung/status')
+def bewaesserung_status():
+    return jsonify({'aktiv': bewaesserung_aktiv})
 
 @app.route('/wind')
 def wind():

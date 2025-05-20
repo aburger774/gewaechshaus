@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,23 +8,27 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { 
+        body {
             background-color: #f8f9fa;
             padding: 20px;
         }
+
         .card {
             margin-bottom: 20px;
             border-radius: 15px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+
         .nav-link {
             color: #333;
             padding: 10px 15px;
         }
+
         .nav-link.active {
             background-color: #e9ecef;
             border-radius: 5px;
         }
+
         .control-card {
             background: white;
             padding: 2rem;
@@ -34,35 +39,42 @@
             display: flex;
             align-items: center;
         }
+
         /* Große Toggle-Switches */
         .form-switch {
             padding-left: 0;
             margin-right: 20px;
         }
+
         .form-switch .form-check-input {
             width: 60px;
             height: 30px;
             cursor: pointer;
             margin: 0;
         }
+
         .form-check-input:checked {
             background-color: #0d6efd;
             border-color: #0d6efd;
         }
+
         .control-content {
             display: flex;
             flex-direction: column;
         }
+
         .control-label {
             font-size: 1.2rem;
             margin: 0;
             color: #333;
         }
+
         .status-text {
             color: #6c757d;
             font-size: 1rem;
             margin-top: 0.2rem;
         }
+
         .controls-container {
             display: flex;
             flex-direction: column;
@@ -74,6 +86,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container-fluid">
         <div class="row">
@@ -101,7 +114,8 @@
                         <div class="controls-container">
                             <div class="control-card">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="fensterToggle" onchange="toggleWindow(this.checked)">
+                                    <input class="form-check-input" type="checkbox" id="fensterToggle"
+                                        onchange="toggleWindow(this.checked)">
                                 </div>
                                 <div class="control-content">
                                     <label class="control-label" for="fensterToggle">Fenster</label>
@@ -110,7 +124,8 @@
                             </div>
                             <div class="control-card">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="bewaesserungToggle" onchange="toggleWatering(this.checked)">
+                                    <input class="form-check-input" type="checkbox" id="bewaesserungToggle"
+                                        onchange="toggleWatering(this.checked)">
                                 </div>
                                 <div class="control-content">
                                     <label class="control-label" for="bewaesserungToggle">Bewässerung</label>
@@ -132,17 +147,22 @@
         }
 
         function toggleWatering(isOn) {
-            // Hier könnte die Bewässerungssteuerung implementiert werden
-            console.log('Bewässerung:', isOn ? 'Ein' : 'Aus');
-            // Status-Text aktualisieren
+            const action = isOn ? 'ein' : 'aus';
+            fetch('/bewaesserung', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'action=' + action
+            });
+
             const bewaesserungStatus = document.getElementById('bewaesserungStatus');
             bewaesserungStatus.textContent = 'Status: ' + (isOn ? 'An' : 'Aus');
         }
 
+
         function sendAction(action) {
             fetch('/motor', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'action=' + action
             });
         }
@@ -156,7 +176,7 @@
                     const fensterToggle = document.getElementById('fensterToggle');
                     const fensterStatus = document.getElementById('fensterStatus');
                     fensterToggle.checked = data.status === 'ausgefahren';
-                    
+
                     // Status-Text aktualisieren
                     if (data.status === 'ausgefahren') {
                         fensterStatus.textContent = 'Status: Offen';
@@ -166,6 +186,14 @@
                         fensterStatus.textContent = 'Status: ' + data.status;
                     }
                 });
+            fetch('/bewaesserung/status')
+                .then(response => response.json())
+                .then(data => {
+                    const bewaesserungToggle = document.getElementById('bewaesserungToggle');
+                    const bewaesserungStatus = document.getElementById('bewaesserungStatus');
+                    bewaesserungToggle.checked = data.aktiv;
+                    bewaesserungStatus.textContent = 'Status: ' + (data.aktiv ? 'An' : 'Aus');
+                });
         }
 
         // Automatisches Update starten
@@ -173,4 +201,5 @@
         window.onload = updateStatus;
     </script>
 </body>
-</html> 
+
+</html>

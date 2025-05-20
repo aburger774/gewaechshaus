@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 import time
 
-RELAIS_PIN = 16
+RELAIS_PIN = 24
 
 GPIO.setmode(GPIO.BCM)
 
@@ -16,7 +16,7 @@ try:
         print("Relais an (Pin als OUTPUT)")
         GPIO.setup(RELAIS_PIN, GPIO.OUT)
         GPIO.output(RELAIS_PIN, GPIO.HIGH)  # Falls nötig, HIGH setzen
-        time.sleep(2)
+        time.sleep(100)
 
 except KeyboardInterrupt:
     print("Programm beendet")

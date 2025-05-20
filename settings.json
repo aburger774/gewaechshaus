@@ -1,5 +1,5 @@
 {
-  "windLimit": 35.0,
+  "windLimit": 48.0,
   "motorSpeed": 100,
   "autoMode": true,
   "notifications": false,
